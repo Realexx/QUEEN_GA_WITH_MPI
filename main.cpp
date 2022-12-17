@@ -7,55 +7,71 @@
 
 using Population = std::vector<std::vector<int>>;
 
-Population init(int nbIndividus) {
+// Fonction d'initialisation d'une population de 'nbIndividus' individus de taille 'taille' chacun
+Population init(int nbIndividus, int taille) {
     std::vector<std::vector<int>> population;
 
-    // Création de 'nbIndivus' individus générée aléatoirement
+    // Création de 'nbIndividus' individus générée aléatoirement
     for (int i = 0; i < nbIndividus; ++i) {
         std::vector<int> individuAAjouter;
 
         // Remplir l'individu avec des valeurs aléatoires
-        for (int j = 0; j < 4 ; ++j) {
-            individuAAjouter.push_back(rand() % 4);
+        for (int j = 0; j < taille ; ++j) {
+            individuAAjouter.push_back(rand() % taille);
         }
 
         // Ajouter l'individu au tableau 'population'
         population.push_back(individuAAjouter);
 
     }
-
     return population;
 }
 
-int evaluation(std::vector<int> individu) {
+// Fonction d'évaluation d'un individu
+int evaluation(const std::vector<int>& individu) {
     int nbConflits = 0;
+    for (int i = 0; i < individu.size(); ++i) {
+        for (int j = i; j < individu.size(); ++j) {
+            if (i == j) continue;
+            int i1 = individu[i];
+            int i2 = individu[j];
+            
+            // Conflits dans les lignes
+            if (i1 == i2) nbConflits++;
+            
+            // Conflits dans les diagonales
+            int differenceIndex = abs(i - j);
+            int differenceValeur = abs(i1 - i2);
 
+            if (differenceIndex == differenceValeur) nbConflits++;
+        }
+    }
     return nbConflits;
 }
 
-void QueenAlgorithm(int nbIndidividus, int nbGenerations) {
-    int countGeneration = 0;
-    Population generation = init(nbIndidividus);
+void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations) {
+    int compteurGeneration = 0;
+    Population generation = init(nbIndividus, taille);
 
-    std::vector<int> meilleurIndividuGlobal; // TODO Réussir à trier le tableau en fonction du nombre de conflits de chaque individu
+    std::vector<int> meilleurIndividuGlobal; // TODO Réussir à trier le tableau en fonction du nombre de conflits de chaque individu OU réussir a trouver le meilleur individu d'une population ==> Le mettre dans cette variable
 
     std::vector<int> copieMeilleurIndividuGlobal(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal
     copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), copieMeilleurIndividuGlobal.begin());
 
 
 
-    while (countGeneration <= nbGenerations) { // Itération sur les générations
+    while (compteurGeneration <= nbGenerations) { // Itération sur les générations
         // Print pour chaque génération
-        std::cout << "Iteration 1 : " << countGeneration << " | Meilleur individu global : [ ";
+        std::cout << "Iteration 1 : " << compteurGeneration << " | Meilleur individu global : [ ";
         for (int value : meilleurIndividuGlobal) {
             std::cout << value << " ";
         }
         std::cout << ']' << std::endl;
 
-        for (int i = 0; i < nbIndidividus; ++i) { // Pour chaque individu
-            int indexIndividu1 = rand() % nbIndidividus;
-            int indexIndividu2 = rand() % nbIndidividus;
-            while (indexIndividu1 == indexIndividu2) indexIndividu1 = rand() % nbIndidividus;
+        for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu
+            int indexIndividu1 = rand() % nbIndividus;
+            int indexIndividu2 = rand() % nbIndividus;
+            while (indexIndividu1 == indexIndividu2) indexIndividu1 = rand() % nbIndividus;
 
             float r; // TODO génération nb aléatoire pour choix entre mutation et croisement
 
@@ -64,7 +80,7 @@ void QueenAlgorithm(int nbIndidividus, int nbGenerations) {
         }
 
 
-        countGeneration += 1;
+        compteurGeneration += 1;
     }
 }
 
