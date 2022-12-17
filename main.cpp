@@ -49,7 +49,8 @@ int evaluation(const std::vector<int>& individu) {
     return nbConflits;
 }
 
-void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations) {
+void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
+    srand (static_cast <unsigned> (time(nullptr))); // Pour la randomisation
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
 
@@ -73,8 +74,11 @@ void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations) {
             int indexIndividu2 = rand() % nbIndividus;
             while (indexIndividu1 == indexIndividu2) indexIndividu1 = rand() % nbIndividus;
 
-            float r; // TODO génération nb aléatoire pour choix entre mutation et croisement
+            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
+            if (r < p) {
+
+            }
 
             // TODO reste de l'algo
         }
