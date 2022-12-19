@@ -7,26 +7,6 @@
 
 using Population = std::vector<std::vector<int>>;
 
-// Fonction d'initialisation d'une population de 'nbIndividus' individus de taille 'taille' chacun
-Population init(int nbIndividus, int taille) {
-    std::vector<std::vector<int>> population;
-
-    // Création de 'nbIndividus' individus générée aléatoirement
-    for (int i = 0; i < nbIndividus; ++i) {
-        std::vector<int> individuAAjouter;
-
-        // Remplir l'individu avec des valeurs aléatoires
-        for (int j = 0; j < taille ; ++j) {
-            individuAAjouter.push_back(rand() % taille);
-        }
-
-        // Ajouter l'individu au tableau 'population'
-        population.push_back(individuAAjouter);
-
-    }
-    return population;
-}
-
 // Fonction d'évaluation d'un individu
 int evaluation(const std::vector<int>& individu) {
     int nbConflits = 0;
@@ -35,10 +15,10 @@ int evaluation(const std::vector<int>& individu) {
             if (i == j) continue;
             int i1 = individu[i];
             int i2 = individu[j];
-            
+
             // Conflits dans les lignes
             if (i1 == i2) nbConflits++;
-            
+
             // Conflits dans les diagonales
             int differenceIndex = abs(i - j);
             int differenceValeur = abs(i1 - i2);
@@ -47,6 +27,48 @@ int evaluation(const std::vector<int>& individu) {
         }
     }
     return nbConflits;
+}
+
+// Fonction d'initialisation d'une population de 'nbIndividus' individus de taille 'taille' chacun
+Population init(int nbIndividus, int taille) {
+    std::vector<std::vector<int>> population;
+
+    // Création de 'nbIndividus' individus générés aléatoirement
+    for (int i = 0; i < nbIndividus; ++i) {
+        std::vector<int> individuAAjouter;
+
+        // Remplir l'individu avec des valeurs aléatoires
+        for (int j = 0; j < taille ; ++j) {
+            individuAAjouter.push_back(rand() % taille);
+        }
+
+        // Calculer le nombre de conflits de l'individu et l'ajouter dans son tableau
+        // Exemple : Individu [2,0,3,1] -> 0 conflit(s) -> [2,0,3,1,0] -> Meilleur solution
+        int nbConflitsIndividuAAjouter = evaluation(individuAAjouter);
+        individuAAjouter.push_back(nbConflitsIndividuAAjouter); //
+
+        // Ajouter l'individu au tableau 'population'
+        population.push_back(individuAAjouter);
+
+    }
+    return population;
+}
+
+// Fonction qui trouve le meilleur individu d'une population
+std::vector<int> rechercheMeilleur(const Population& pop) {
+    int nbConflitsMeilleur = 6; // On initialise la variable du nombre conflit au nb de conflits maximum possible
+    std::vector<int> meilleurIndividu = pop[0];
+    size_t indexDernierElement = meilleurIndividu.size() - 1;
+
+    for (std::vector<int> individu : pop) {
+        int nbConflitIndividuCourant = individu[indexDernierElement];
+
+        if (nbConflitIndividuCourant < nbConflitsMeilleur) {
+            meilleurIndividu = individu;
+            nbConflitsMeilleur = nbConflitIndividuCourant;
+        }
+    }
+    return meilleurIndividu;
 }
 
 void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
@@ -89,14 +111,19 @@ void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
 }
 
 int main(int argc, char** argv) {
-    /* TEST INIT
-    Population pop = init(10);
+    srand (static_cast <unsigned> (time(nullptr)));
+
+    /*
+    Population pop = init(10, 4);
     for (std::vector<int> tab : pop) {
         for (int i : tab) {
             std::cout << i ;
         }
         std::cout << std::endl;
     }
+
+    std::vector<int> best = rechercheMeilleur(pop);
+    for (int x : best) std::cout << '\n' << x;
      */
 
     /**
