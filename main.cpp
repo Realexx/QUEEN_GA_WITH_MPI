@@ -71,12 +71,20 @@ std::vector<int> rechercheMeilleur(const Population& pop) {
     return meilleurIndividu;
 }
 
+std::vector<int> croisement() { // TODO
+    return std::vector<int>();
+}
+
+std::vector<int> mutation() { // TODO
+    return std::vector<int>();
+}
+
 void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
     srand (static_cast <unsigned> (time(nullptr))); // Pour la randomisation
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
 
-    std::vector<int> meilleurIndividuGlobal; // TODO Réussir à trier le tableau en fonction du nombre de conflits de chaque individu OU réussir a trouver le meilleur individu d'une population ==> Le mettre dans cette variable
+    std::vector<int> meilleurIndividuGlobal = rechercheMeilleur(generation);
 
     std::vector<int> copieMeilleurIndividuGlobal(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal
     copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), copieMeilleurIndividuGlobal.begin());
@@ -99,9 +107,17 @@ void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
             float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
             if (r < p) {
-
+                copieMeilleurIndividuGlobal = croisement();
+            } else {
+                copieMeilleurIndividuGlobal = mutation();
             }
 
+            if (copieMeilleurIndividuGlobal[copieMeilleurIndividuGlobal.size()-1] <= generation[i][copieMeilleurIndividuGlobal.size()-1]) {
+                for (int j = 0; j < copieMeilleurIndividuGlobal.size(); ++j) {
+                    generation[i][j] = copieMeilleurIndividuGlobal[j];
+                }
+
+            }
             // TODO reste de l'algo
         }
 
@@ -114,6 +130,7 @@ int main(int argc, char** argv) {
     srand (static_cast <unsigned> (time(nullptr)));
 
     /*
+
     Population pop = init(10, 4);
     for (std::vector<int> tab : pop) {
         for (int i : tab) {
@@ -124,6 +141,20 @@ int main(int argc, char** argv) {
 
     std::vector<int> best = rechercheMeilleur(pop);
     for (int x : best) std::cout << '\n' << x;
+
+    std::cout << "\n";
+
+    std::vector<int> meilleurIndividuGlobal = rechercheMeilleur(pop);
+
+    std::vector<int> copieMeilleurIndividuGlobal(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal
+    copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), copieMeilleurIndividuGlobal.begin());
+
+    for (int x : meilleurIndividuGlobal) std::cout << x;
+
+    std::cout << "\n";
+
+    for (int y : copieMeilleurIndividuGlobal) std::cout << y;
+
      */
 
     /**
