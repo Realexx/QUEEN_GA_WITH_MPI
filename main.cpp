@@ -45,7 +45,7 @@ Population init(int nbIndividus, int taille) {
         // Calculer le nombre de conflits de l'individu et l'ajouter dans son tableau
         // Exemple : Individu [2,0,3,1] -> 0 conflit(s) -> [2,0,3,1,0] -> Meilleur solution
         int nbConflitsIndividuAAjouter = evaluation(individuAAjouter);
-        individuAAjouter.push_back(nbConflitsIndividuAAjouter); //
+        individuAAjouter.push_back(nbConflitsIndividuAAjouter);
 
         // Ajouter l'individu au tableau 'population'
         population.push_back(individuAAjouter);
@@ -79,6 +79,13 @@ std::vector<int> mutation() { // TODO
     return std::vector<int>();
 }
 
+/**
+ * Fonction générale qui résout le problème des reines
+ * @param nbIndividus nombre d'individus par générations
+ * @param taille taille du tableau dans lequel résoudre le problème des reines (Ex : si taille = 4 -> tableau 4x4)
+ * @param nbGenerations
+ * @param p
+ */
 void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
     srand (static_cast <unsigned> (time(nullptr))); // Pour la randomisation
     int compteurGeneration = 0;
@@ -86,42 +93,38 @@ void QueenAlgorithm(int nbIndividus, int taille, int nbGenerations, float p) {
 
     std::vector<int> meilleurIndividuGlobal = rechercheMeilleur(generation);
 
-    std::vector<int> copieMeilleurIndividuGlobal(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal
-    copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), copieMeilleurIndividuGlobal.begin());
-
-
+    std::vector<int> x(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal dans une variable 'x'.
+    copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), x.begin());
 
     while (compteurGeneration <= nbGenerations) { // Itération sur les générations
         // Print pour chaque génération
-        std::cout << "Iteration 1 : " << compteurGeneration << " | Meilleur individu global : [ ";
+        std::cout << "Iteration : " << compteurGeneration << " | Meilleur individu global : [ ";
         for (int value : meilleurIndividuGlobal) {
             std::cout << value << " ";
         }
         std::cout << ']' << std::endl;
 
-        for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu
-            int indexIndividu1 = rand() % nbIndividus;
-            int indexIndividu2 = rand() % nbIndividus;
-            while (indexIndividu1 == indexIndividu2) indexIndividu1 = rand() % nbIndividus;
+        for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu de la génération
 
-            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
 
             if (r < p) {
-                copieMeilleurIndividuGlobal = croisement();
+                x = croisement(); // Croisement entre le meilleur individu et l'individu courant
             } else {
-                copieMeilleurIndividuGlobal = mutation();
+                x = mutation(); // Mutation de l'individu courant
             }
+            // TODO il faut que x contienne le cost mis à jour après mutation ou croisement
 
-            if (copieMeilleurIndividuGlobal[copieMeilleurIndividuGlobal.size()-1] <= generation[i][copieMeilleurIndividuGlobal.size()-1]) {
-                for (int j = 0; j < copieMeilleurIndividuGlobal.size(); ++j) {
-                    generation[i][j] = copieMeilleurIndividuGlobal[j];
+            if (x[x.size() - 1] <= generation[i][x.size() - 1]) { // Comparaison du nombre de conflits entre l'individu courant et l'individu qui a été généré via mutation ou croisement (variable 'x').
+                // Si l'individu généré est meilleur → remplacement de l'individu courant dans la génération
+                for (int j = 0; j < x.size(); ++j) {
+                    generation[i][j] = x[j];
                 }
-
             }
-            // TODO reste de l'algo
+            std::vector<int> value = {} ; // TODO que mettre dans cette variable ??
+            if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] > value[value.size()-1])
+                std::copy(value.begin(), value.end(), meilleurIndividuGlobal.begin());
         }
-
-
         compteurGeneration += 1;
     }
 }
