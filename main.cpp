@@ -2,6 +2,7 @@
 #include <iostream>
 #include "vector"
 #include <cstdlib>
+#include <utility>
 
 using Population = std::vector<std::vector<int>>;
 
@@ -83,9 +84,25 @@ std::vector<int> rechercheMeilleur(const Population& pop) {
     return meilleurIndividu;
 }
 
-std::vector<int> croisement(std::vector<int> meilleurIndividu, std::vector<int> individuCourant) { // TODO
-    std::vector<int> individuApresCroisement;
+/**
+ * Fonction permettant de croiser un individu avec un autre
+ * @param individu1
+ * @param individu2
+ * @return un individu issu du croisement entre 'individu1' et 'individu2'
+ */
+std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individu2) { // TODO
+    std::vector<int> individuApresCroisement = std::move(individu1);
+    // Tirage aléatoire des deux index à remplacer pour effectuer le croisement
+    int indexAChanger1 = rand() % individuApresCroisement.size()-1;
+    int indexAChanger2 = rand() % individuApresCroisement.size()-1;
+    while (indexAChanger1 == indexAChanger2) indexAChanger1 = rand() % individuApresCroisement.size()-1;
 
+    // Croisement
+    individuApresCroisement[indexAChanger1] = individu2[indexAChanger1];
+    individuApresCroisement[indexAChanger2] = individu2[indexAChanger2];
+
+    // Evaluation du nouvel individu
+    individuApresCroisement[individuApresCroisement.size()-1] = evaluation(individuApresCroisement);
 
     return individuApresCroisement;
 }
@@ -96,17 +113,18 @@ std::vector<int> croisement(std::vector<int> meilleurIndividu, std::vector<int> 
  * @return l'individu muté
  */
 std::vector<int> mutation(std::vector<int> individu) {
-    int r = rand() % individu.size()-1;
-    int elemARemplacer = individu[r];
-    int r2 = rand() % individu.size()-1;
-    while (elemARemplacer == r2) r2 = rand() % individu.size()-1;
+    std::vector<int> individuApresMutation = std::move(individu);
 
-    individu[r] = r2;
+    size_t tailleIndividu = individuApresMutation.size();
+    int r = rand() % tailleIndividu - 1;
+    int r2 = rand() % tailleIndividu - 1;
+    while (individuApresMutation[r] == r2) r2 = rand() % tailleIndividu - 1;
+    individuApresMutation[r] = r2;
 
-    // Ré-évaluation de l'individu
-    individu[individu.size()-1] = evaluation(individu);
+    // Evaluation du nouvel individu
+    individuApresMutation[individuApresMutation.size()-1] = evaluation(individuApresMutation);
 
-    return individu;
+    return individuApresMutation;
 }
 
 /**
@@ -152,7 +170,7 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
                 }
             }
             std::vector<int> value;
-            std::copy(generation[i].begin(), generation[i].end(), value.begin()); // Copie de l'individu courant dans 'value'.
+            std::copy(generation[i].begin(), generation[i].end(), value.begin()); // Copie de l'individu courant dans 'value'. // TODO bug sur cette instruction
 
             if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] > value[value.size()-1]) // Si cet individu est meilleur que le meilleur global on remplace le meilleur global en faisant une copie.
                 std::copy(value.begin(), value.end(), meilleurIndividuGlobal.begin());
@@ -164,35 +182,7 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
 
 int main(int argc, char** argv) {
     srand (static_cast <unsigned> (time(nullptr)));
-    /*
-
-    Population pop = init(10, 4);
-    for (std::vector<int> tab : pop) {
-        for (int i : tab) {
-            std::cout << i ;
-        }
-        std::cout << std::endl;
-    }
-
-    std::vector<int> best = rechercheMeilleur(pop);
-    for (int x : best) std::cout << '\n' << x;
-
-    std::cout << "\n";
-
-    std::vector<int> meilleurIndividuGlobal = rechercheMeilleur(pop);
-
-    std::vector<int> copieMeilleurIndividuGlobal(meilleurIndividuGlobal.size()); // Copie de meilleurIndividuGlobal
-    copy(meilleurIndividuGlobal.begin(), meilleurIndividuGlobal.end(), copieMeilleurIndividuGlobal.begin());
-
-    for (int x : meilleurIndividuGlobal) std::cout << x;
-
-    std::cout << "\n";
-
-    for (int y : copieMeilleurIndividuGlobal) std::cout << y;
-
-     */
-
-    // QueenAlgorithm();
+    QueenAlgorithm();
 
     /**
     // Initialize the MPI environment
