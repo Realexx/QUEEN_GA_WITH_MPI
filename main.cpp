@@ -90,7 +90,7 @@ std::vector<int> rechercheMeilleur(const Population& pop) {
  * @param individu2
  * @return un individu issu du croisement entre 'individu1' et 'individu2'
  */
-std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individu2) { // TODO
+std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individu2) {
     std::vector<int> individuApresCroisement = std::move(individu1);
     // Tirage aléatoire des deux index à remplacer pour effectuer le croisement
     int indexAChanger1 = rand() % individuApresCroisement.size()-1;
@@ -146,7 +146,7 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
 
     bool solution = false;
 
-    while (compteurGeneration <= nbGenerations || !solution) { // Itération sur les générations
+    while (compteurGeneration <= nbGenerations && !solution) { // Itération sur les générations
         // Print pour chaque génération
         std::cout << "Iteration : " << compteurGeneration << " | Meilleur individu global : [ ";
         for (int value : meilleurIndividuGlobal) {
@@ -158,9 +158,9 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
             float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
 
             if (r < p) {
-                x = croisement(meilleurIndividuGlobal, generation[i]); // Croisement entre le meilleur individu et l'individu courant
+                x = croisement(meilleurIndividuGlobal, generation[i]); // Croisement entre le meilleur individu et l'individu courant // TODO
             } else {
-                x = mutation(generation[i]); // Mutation de l'individu courant
+                x = mutation(generation[i]); // Mutation de l'individu courant // TODO
             }
 
             if (x[x.size() - 1] <= generation[i][x.size() - 1]) { // Comparaison du nombre de conflits entre l'individu courant et l'individu qui a été généré via mutation ou croisement (variable 'x').
@@ -170,7 +170,9 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
                 }
             }
             std::vector<int> value;
-            std::copy(generation[i].begin(), generation[i].end(), value.begin()); // Copie de l'individu courant dans 'value'. // TODO bug sur cette instruction
+            value = generation[i];
+            // std::copy(generation[i].begin(), generation[i].end(), value.begin()); // Copie de l'individu courant dans 'value'.
+
 
             if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] > value[value.size()-1]) // Si cet individu est meilleur que le meilleur global on remplace le meilleur global en faisant une copie.
                 std::copy(value.begin(), value.end(), meilleurIndividuGlobal.begin());
