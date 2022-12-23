@@ -106,17 +106,36 @@ std::vector<int> rechercheMeilleur(const Population& pop) {
  */
 std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individu2) {
     std::vector<int> individuApresCroisement = std::move(individu1);
-    // Tirage aléatoire des deux index à remplacer pour effectuer le croisement
-    int indexAChanger1 = rand() % individuApresCroisement.size()-1;
-    int indexAChanger2 = rand() % individuApresCroisement.size()-1;
-    while (indexAChanger1 == indexAChanger2) indexAChanger1 = rand() % individuApresCroisement.size()-1;
+    std::vector<int> individu = std::move(individu2);
+    individuApresCroisement.pop_back(); // Suppression de l'évaluation précédente
 
-    // Croisement
-    individuApresCroisement[indexAChanger1] = individu2[indexAChanger1];
-    individuApresCroisement[indexAChanger2] = individu2[indexAChanger2];
+    size_t nbElementsACroiser;
 
-    // Evaluation du nouvel individu
-    individuApresCroisement[individuApresCroisement.size()-1] = evaluation(individuApresCroisement);
+    if (individuApresCroisement.size() % 2 == 0) {
+        nbElementsACroiser = individuApresCroisement.size() / 2; // Exemple pour un tableau de 4 → On croisera 4/2 = 2 éléments.
+    } else {
+        nbElementsACroiser = individuApresCroisement.size() / 2 + 1; // Exemple pour un tableau de 5 → On croisera 5/2 + 1 = 3 éléments.
+    }
+
+    // Génération de la liste des index des éléments qui vont être remplacés
+    std::vector<int> listeIndexAChanger;
+    for (int i = 0; i < nbElementsACroiser; ++i) {
+        int random = rand() % individuApresCroisement.size();
+
+        for (int x : listeIndexAChanger) {
+            if (x == random) random = rand() % individuApresCroisement.size();
+        }
+
+        listeIndexAChanger.push_back(random);
+    }
+
+    // Remplacement
+    for (int indexAChanger : listeIndexAChanger) {
+        individuApresCroisement[indexAChanger] = individu[indexAChanger];
+    }
+
+    // Ré-évaluation
+    individuApresCroisement.push_back(evaluation(individuApresCroisement));
 
     return individuApresCroisement;
 }
@@ -146,7 +165,7 @@ std::vector<int> mutation(std::vector<int> individu) {
  * @param nbGenerations nombre de génération à itérer
  * @param p probabilité de croisement
  */
-void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50, float p = 0.1) {
+void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 50, float p = 0.5) {
     srand (static_cast <unsigned> (time(nullptr))); // Pour la randomisation
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
@@ -166,7 +185,7 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
             float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
 
             if (r < p) {
-                // x = croisement(meilleurIndividuGlobal, generation[i]); // Croisement entre le meilleur individu et l'individu courant // TODO
+                x = croisement(meilleurIndividuGlobal, generation[i]); // Croisement entre le meilleur individu et l'individu courant
             } else {
                 x = mutation(generation[i]); // Mutation de l'individu courant
             }
@@ -188,16 +207,16 @@ void QueenAlgorithm(int nbIndividus = 10, int taille = 4, int nbGenerations = 50
         if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] == 0) {
             solution = true; // Si une solution est trouvée → On s'arrête.
             std::cout << "Une solution a été trouvée ! \n" << " -> ";
-            afficheIndividu(meilleurIndividuGlobal);
         }
     }
+    std::cout << "Meilleur individu trouvé : "; afficheIndividu(meilleurIndividuGlobal);
 }
 
 int main(int argc, char** argv) {
     srand (static_cast <unsigned> (time(nullptr)));
-    // QueenAlgorithm();
+    QueenAlgorithm();
+    // QueenAlgorithm(10, 5, 1000);
 
-    QueenAlgorithm(5, 5, 500);
     /**
     // Initialize the MPI environment
     MPI_Init(&argc, &argv);
