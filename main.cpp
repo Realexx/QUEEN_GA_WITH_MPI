@@ -12,9 +12,9 @@ using Population = std::vector<std::vector<int>>;
  * Fonction d'affichage d'un individu
  * @param individu l'individu à afficher
  */
-void afficheIndividu(const std::vector<int>& individu) {
+void afficheIndividu(const std::vector<int> &individu) {
     std::cout << "[ ";
-    for (int x : individu) {
+    for (int x: individu) {
         std::cout << x << " ";
     }
     std::cout << "]" << std::endl;
@@ -25,7 +25,7 @@ void afficheIndividu(const std::vector<int>& individu) {
  * @param individu individu à évaluer
  * @return le nombre de conflits de l'individu passé en paramètre
  */
-int evaluation(const std::vector<int>& individu) {
+int evaluation(const std::vector<int> &individu) {
     int nbConflits = 0;
     for (int i = 0; i < individu.size(); ++i) {
         for (int j = i; j < individu.size(); ++j) {
@@ -60,7 +60,7 @@ Population init(int nbIndividus, int taille) {
         std::vector<int> individuAAjouter;
 
         // Remplir l'individu avec des valeurs aléatoires
-        for (int j = 0; j < taille ; ++j) {
+        for (int j = 0; j < taille; ++j) {
             individuAAjouter.push_back(rand() % taille);
         }
 
@@ -82,12 +82,12 @@ Population init(int nbIndividus, int taille) {
  * @param pop la population sur laquelle on recherche le meilleur individu
  * @return le meilleur individu de la population passé en paramètre
  */
-std::vector<int> rechercheMeilleur(const Population& pop) {
+std::vector<int> rechercheMeilleur(const Population &pop) {
     int nbConflitsMeilleur = 6; // On initialise la variable du nombre conflit au nb de conflits maximum possible
     std::vector<int> meilleurIndividu = pop[0];
     size_t indexDernierElement = meilleurIndividu.size() - 1;
 
-    for (std::vector<int> individu : pop) {
+    for (std::vector<int> individu: pop) {
         int nbConflitIndividuCourant = individu[indexDernierElement];
 
         if (nbConflitIndividuCourant < nbConflitsMeilleur) {
@@ -112,9 +112,11 @@ std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individ
     size_t nbElementsACroiser;
 
     if (individuApresCroisement.size() % 2 == 0) {
-        nbElementsACroiser = individuApresCroisement.size() / 2; // Exemple pour un tableau de 4 → On croisera 4/2 = 2 éléments.
+        nbElementsACroiser =
+                individuApresCroisement.size() / 2; // Exemple pour un tableau de 4 → On croisera 4/2 = 2 éléments.
     } else {
-        nbElementsACroiser = individuApresCroisement.size() / 2 + 1; // Exemple pour un tableau de 5 → On croisera 5/2 + 1 = 3 éléments.
+        nbElementsACroiser = individuApresCroisement.size() / 2 +
+                             1; // Exemple pour un tableau de 5 → On croisera 5/2 + 1 = 3 éléments.
     }
 
     // Génération de la liste des index des éléments qui vont être remplacés
@@ -122,7 +124,7 @@ std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individ
     for (int i = 0; i < nbElementsACroiser; ++i) {
         int random = rand() % individuApresCroisement.size();
 
-        for (int x : listeIndexAChanger) {
+        for (int x: listeIndexAChanger) {
             if (x == random) random = rand() % individuApresCroisement.size();
         }
 
@@ -130,7 +132,7 @@ std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individ
     }
 
     // Remplacement
-    for (int indexAChanger : listeIndexAChanger) {
+    for (int indexAChanger: listeIndexAChanger) {
         individuApresCroisement[indexAChanger] = individu[indexAChanger];
     }
 
@@ -165,8 +167,9 @@ std::vector<int> mutation(std::vector<int> individu) {
  * @param nbGenerations nombre de génération à itérer
  * @param p probabilité de croisement
  */
-void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 50, float p = 0.5) {
-    srand (static_cast <unsigned> (time(nullptr))); // Pour la randomisation
+void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90000, float p = 0.5, int mode = 0, float pCroisement = 0.5, float pMutation = 0.5,
+                    bool print = true) {
+    srand(static_cast <unsigned> (time(nullptr))); // Pour assurer une meilleure génération des randoms
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
 
@@ -179,18 +182,48 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 50
 
     while (compteurGeneration <= nbGenerations && !solution) { // Itération sur les générations
         // Print pour chaque génération
-        std::cout << "Iteration : " << compteurGeneration << " | Meilleur individu global : "; afficheIndividu(meilleurIndividuGlobal);
+        if (print) {
+            // On affiche le meilleur individu pour chaque itération avec le nombre de conflits(s) en dernière position du tableau.
+            std::cout << "Iteration : " << compteurGeneration << " | Meilleur individu global : ";
+            afficheIndividu(meilleurIndividuGlobal);
+        }
 
         for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu de la génération
-            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
+            if (mode == 0) { // Stratégie 1
+                float r = static_cast <float> (rand()) /
+                          static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
 
-            if (r < p) {
-                x = croisement(meilleurIndividuGlobal, generation[i]); // Croisement entre le meilleur individu et l'individu courant
-            } else {
-                x = mutation(generation[i]); // Mutation de l'individu courant
+                if (r < p) { // Soit, on effectue un croisement
+                    x = croisement(meilleurIndividuGlobal,
+                                   generation[i]); // Croisement entre le meilleur individu et l'individu courant
+                } else { // Soit une mutation
+                    x = mutation(generation[i]); // Mutation de l'individu courant
+                }
+
+            } else { // Stratégie 2
+                // Génération de 2 randoms, un pour la mutation et un pour le croisement
+                float rCroisement = static_cast <float> (rand()) /
+                          static_cast <float> (RAND_MAX);
+                float rMutation = static_cast <float> (rand()) /
+                                    static_cast <float> (RAND_MAX);
+
+                bool estCroise = rCroisement < pCroisement;
+                bool estMute = rMutation < pMutation;
+
+                if (estCroise) {
+                    x = croisement(meilleurIndividuGlobal,
+                                   generation[i]);
+
+                    if (estMute) {
+                        x = mutation(x);
+                    }
+                } else if (estMute) {
+                    x = mutation(generation[i]);
+                }
             }
 
-            if (x[x.size() - 1] <= generation[i][x.size() - 1]) { // Comparaison du nombre de conflits entre l'individu courant et l'individu qui a été généré via mutation ou croisement (variable 'x').
+            if (x[x.size() - 1] <= generation[i][x.size() - 1]) {
+                // Comparaison du nombre de conflits entre l'individu courant et l'individu qui a été généré via mutation ou croisement (variable 'x').
                 // Si l'individu généré est meilleur → remplacement de l'individu courant dans la génération
                 for (int j = 0; j < x.size(); ++j) {
                     generation[i][j] = x[j];
@@ -200,22 +233,29 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 50
             std::vector<int> value;
             value = generation[i];
 
-            if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] >= value[value.size()-1]) // Si cet individu est meilleur (ou tout autant meilleur (cela permet d'avoir plus de diversité dans la variable)) que le meilleur global on remplace le meilleur global en faisant une copie.
+            if (meilleurIndividuGlobal[meilleurIndividuGlobal.size() - 1] >= value[value.size() - 1])
+                // Si cet individu est meilleur (ou tout autant meilleur (cela permet d'avoir plus de diversité dans la variable)) que le meilleur global on remplace le meilleur global en faisant une copie.
                 std::copy(value.begin(), value.end(), meilleurIndividuGlobal.begin());
         }
         compteurGeneration += 1;
-        if (meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1] == 0) {
+        if (meilleurIndividuGlobal[meilleurIndividuGlobal.size() - 1] == 0) {
             solution = true; // Si une solution est trouvée → On s'arrête.
             std::cout << "Une solution a été trouvée ! \n" << " -> ";
         }
     }
-    std::cout << "Meilleur individu trouvé : "; afficheIndividu(meilleurIndividuGlobal);
+    std::cout << "Meilleur individu trouvé (en " << compteurGeneration-1 << " itérations) : ";
+    int nbConflitsElementFinal = meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1];
+    meilleurIndividuGlobal.pop_back(); // Suppression du nombre de conflits pour affichage
+    afficheIndividu(meilleurIndividuGlobal);
+    std::cout << "Nombre de conflit(s) : " << nbConflitsElementFinal << " conflit(s).";
 }
 
-int main(int argc, char** argv) {
-    srand (static_cast <unsigned> (time(nullptr)));
-    QueenAlgorithm();
+int main(int argc, char **argv) {
+    srand(static_cast <unsigned> (time(nullptr)));
+    // QueenAlgorithm();
+    QueenAlgorithm(50, 6, 90000, 0.5, 1, 0.5, 0.5);
     // QueenAlgorithm(10, 5, 1000);
+    // QueenAlgorithm(100, 8, 90000, 0.5);
 
     /**
     // Initialize the MPI environment
