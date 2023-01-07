@@ -109,23 +109,24 @@ std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individ
     std::vector<int> individu = std::move(individu2);
     individuApresCroisement.pop_back(); // Suppression de l'évaluation précédente
 
-    size_t nbElementsACroiser;
+    size_t nbElementsACroiser = individuApresCroisement.size() / 2;
 
+    /*
     if (individuApresCroisement.size() % 2 == 0) {
         nbElementsACroiser =
                 individuApresCroisement.size() / 2; // Exemple pour un tableau de 4 → On croisera 4/2 = 2 éléments.
     } else {
-        nbElementsACroiser = individuApresCroisement.size() / 2 +
-                             1; // Exemple pour un tableau de 5 → On croisera 5/2 + 1 = 3 éléments.
+        nbElementsACroiser = individuApresCroisement.size() / 2 + 1; // Exemple pour un tableau de 5 → On croisera 5/2 + 1 = 3 éléments.
     }
+     */
 
-    // Génération de la liste des index des éléments qui vont être remplacés
+    // Génération de la liste des index des éléments qui vont être remplacés par des éléments de l'individu n°2
     std::vector<int> listeIndexAChanger;
     for (int i = 0; i < nbElementsACroiser; ++i) {
         int random = rand() % individuApresCroisement.size();
 
         for (int x: listeIndexAChanger) {
-            if (x == random) random = rand() % individuApresCroisement.size();
+            while (x == random) random = rand() % individuApresCroisement.size(); // Vérification des doublons
         }
 
         listeIndexAChanger.push_back(random);
@@ -142,7 +143,7 @@ std::vector<int> croisement(std::vector<int> individu1, std::vector<int> individ
     return individuApresCroisement;
 }
 
-/**
+/** @deprecated mélanger les individus à muter n'est pas une bonne chose
  * Fonction permettant de muter un individu en mélangeant ses éléments
  * @param individu l'individu à muter
  * @return l'individu muté
@@ -161,14 +162,51 @@ std::vector<int> mutation(std::vector<int> individu) {
 }
 
 /**
+ * Fonction permettant de muter un individu en modifiant une minorité de ses éléments de manière aléatoire
+ * @param individu l'individu à muter
+ * @return l'individu muté
+ */
+std::vector<int> mutationV2(std::vector<int> individu) {
+    std::vector<int> individuApresMutation = std::move(individu);
+    individuApresMutation.pop_back();
+
+    size_t nbElementsAMuter = individuApresMutation.size() / 3;
+
+    // Génération de la liste des index des éléments qui vont être remplacés par d'autres éléments aléatoires
+    std::vector<int> listeIndexAMuter;
+    for (int i = 0; i < nbElementsAMuter; ++i) {
+        int random = rand() % individuApresMutation.size();
+
+        for (int x : listeIndexAMuter) {
+            while (x == random) random = rand() % individuApresMutation.size();
+        }
+
+        listeIndexAMuter.push_back(random);
+    }
+
+    // Remplacement
+    for (int indexAChanger: listeIndexAMuter) {
+        int random = rand() % individuApresMutation.size();
+        while (random == individuApresMutation[indexAChanger]) random = rand() % individuApresMutation.size();
+        individuApresMutation[indexAChanger] = random;
+    }
+
+    // Ré-évaluation
+    individuApresMutation.push_back(evaluation(individuApresMutation));
+
+    return individuApresMutation;
+
+}
+
+/**
  * Fonction générale qui résout le problème des reines
  * @param nbIndividus nombre d'individus par générations
  * @param taille taille du tableau dans lequel résoudre le problème des reines (Ex : si taille = 4 -> tableau 4x4)
  * @param nbGenerations nombre de génération à itérer
  * @param p probabilité de croisement
  */
-void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90000, float p = 0.5, int mode = 0, float pCroisement = 0.5, float pMutation = 0.5,
-                    bool print = true) {
+void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 100, float p = 0.5,
+                    bool print = true, int mode = 0, float pCroisement = 0.5, float pMutation = 0.5) {
     srand(static_cast <unsigned> (time(nullptr))); // Pour assurer une meilleure génération des randoms
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
@@ -189,6 +227,7 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90
         }
 
         for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu de la génération
+
             if (mode == 0) { // Stratégie 1
                 float r = static_cast <float> (rand()) /
                           static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
@@ -197,7 +236,7 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90
                     x = croisement(meilleurIndividuGlobal,
                                    generation[i]); // Croisement entre le meilleur individu et l'individu courant
                 } else { // Soit une mutation
-                    x = mutation(generation[i]); // Mutation de l'individu courant
+                    x = mutationV2(generation[i]); // Mutation de l'individu courant
                 }
 
             } else { // Stratégie 2
@@ -215,10 +254,10 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90
                                    generation[i]);
 
                     if (estMute) {
-                        x = mutation(x);
+                        x = mutationV2(x);
                     }
                 } else if (estMute) {
-                    x = mutation(generation[i]);
+                    x = mutationV2(generation[i]);
                 }
             }
 
@@ -253,11 +292,13 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 90
 int main(int argc, char **argv) {
     srand(static_cast <unsigned> (time(nullptr)));
     // QueenAlgorithm();
-    QueenAlgorithm(50, 6, 90000, 0.5, 1, 0.5, 0.5);
+    // QueenAlgorithm(50, 6, 250, 0.5, false, 0, 0.5, 0.5);
     // QueenAlgorithm(10, 5, 1000);
-    // QueenAlgorithm(100, 8, 90000, 0.5);
+    // QueenAlgorithm(100, 8, 1000, 0.5);
+    QueenAlgorithm(75,10, INFINITY, 0.5, false);
+    // QueenAlgorithm(75,10, INFINITY, 0.5, false, 1, 0.7, 0.1);
 
-    /**
+    /*
     // Initialize the MPI environment
     MPI_Init(&argc, &argv);
 
