@@ -99,6 +99,27 @@ std::vector<int> rechercheMeilleur(const Population &pop) {
 }
 
 /**
+ * Fonction qui recherche plusieurs meilleurs individus d'une population
+ * @param pop la population sur laquelle rechercher les meilleurs individus
+ * @param nb nombre de meilleurs individus à extraire
+ * @return le tableau des meilleurs individus
+ */
+Population rechercheMeilleurs(const Population &pop, int nb) {
+    Population populationSub = pop;
+    Population meilleurs;
+
+    for (int i = 0; i < nb; ++i) {
+        std::vector<int> meilleur = rechercheMeilleur(populationSub); // Appel de rechercheMeilleur
+        meilleurs.push_back(meilleur); // Ajout du meilleur trouvé au tableau à renvoyer
+        populationSub.erase(std::remove(populationSub.begin(), populationSub.end(), meilleur), populationSub.end());
+        // Pb : Si plusieurs éléments sont identiques dans les meilleurs, il n'y en aura que 1 qui sera considéré et donc renvoyé par la fonction
+        // ⇛ Pas plus mal pour la diversité cependant
+    }
+
+    return meilleurs;
+}
+
+/**
  * Fonction permettant de croiser un individu avec un autre
  * @param individu1
  * @param individu2
@@ -206,8 +227,17 @@ std::vector<int> mutationV2(std::vector<int> individu) {
  * @param p probabilité de croisement
  */
 void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 100, float p = 0.5,
-                    bool print = true, int mode = 0, float pCroisement = 0.5, float pMutation = 0.5) {
-    srand(static_cast <unsigned> (time(nullptr))); // Pour assurer une meilleure génération des randoms
+                    int nbIterationAvantSwap = 3, int nbIndividuASwap = 5, bool print = true,
+                    int mode = 0, float pCroisement = 0.5, float pMutation = 0.5) {
+
+    int nbProcessus, rang;
+    MPI_Comm_size(MPI_COMM_WORLD, &nbProcessus);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rang);
+
+    srand(time(nullptr) + rang); // Pour assurer une meilleure génération des randoms
+
+    // printf("Processus %d sur %d processus\n", rang, nbProcessus);
+
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
 
@@ -219,10 +249,19 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
     bool solution = false;
 
     while (compteurGeneration <= nbGenerations && !solution) { // Itération sur les générations
+        // Toutes les 'nbIterationAvantSwap' iterations, trouver les 'nbIndividuASwap' meilleurs individus de la population
+        // et les envoyer au processus 'rang + 1' sauf si c'est le processus 2 il envoie au processus 0
+        if (compteurGeneration % nbIterationAvantSwap == 0) {
+            Population tabToSend = rechercheMeilleurs(generation, nbIndividuASwap);
+
+            if (rang == 2)
+                return; // TODO A faire
+        }
+
         // Print pour chaque génération
         if (print) {
             // On affiche le meilleur individu pour chaque itération avec le nombre de conflits(s) en dernière position du tableau.
-            std::cout << "Iteration : " << compteurGeneration << " | Meilleur individu global : ";
+            std::cout << "(P" << rang << ") Iteration : " << compteurGeneration << " | Meilleur individu global : ";
             afficheIndividu(meilleurIndividuGlobal);
         }
 
@@ -241,18 +280,14 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
 
             } else { // Stratégie 2
                 // Génération de 2 randoms, un pour la mutation et un pour le croisement
-                float rCroisement = static_cast <float> (rand()) /
-                          static_cast <float> (RAND_MAX);
-                float rMutation = static_cast <float> (rand()) /
-                                    static_cast <float> (RAND_MAX);
+                float rCroisement = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                float rMutation = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
                 bool estCroise = rCroisement < pCroisement;
                 bool estMute = rMutation < pMutation;
 
-                if (estCroise) {
-                    x = croisement(meilleurIndividuGlobal,
-                                   generation[i]);
-
+                if (estCroise) { // Si croisement + mutation => effectuer la mutation sur l'individu croisé au préalable
+                    x = croisement(meilleurIndividuGlobal,generation[i]);
                     if (estMute) {
                         x = mutationV2(x);
                     }
@@ -279,42 +314,28 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
         compteurGeneration += 1;
         if (meilleurIndividuGlobal[meilleurIndividuGlobal.size() - 1] == 0) {
             solution = true; // Si une solution est trouvée → On s'arrête.
-            std::cout << "Une solution a été trouvée ! \n" << " -> ";
+            std::cout << "(P" << rang << ") Une solution a été trouvée ! \n" << " -> ";
         }
     }
     std::cout << "Meilleur individu trouvé (en " << compteurGeneration-1 << " itérations) : ";
     int nbConflitsElementFinal = meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1];
     meilleurIndividuGlobal.pop_back(); // Suppression du nombre de conflits pour affichage
     afficheIndividu(meilleurIndividuGlobal);
-    std::cout << "Nombre de conflit(s) : " << nbConflitsElementFinal << " conflit(s).";
+    std::cout << "(P" << rang << ") Nombre de conflit(s) : " << nbConflitsElementFinal << " conflit(s).";
 }
 
 int main(int argc, char **argv) {
-    srand(static_cast <unsigned> (time(nullptr)));
+    // Initialisation de MPI
+    MPI_Init(&argc, &argv);
+
+    // ========================================== TESTS ======================================
     // QueenAlgorithm();
     // QueenAlgorithm(50, 6, 250, 0.5, false, 0, 0.5, 0.5);
     // QueenAlgorithm(10, 5, 1000);
     // QueenAlgorithm(100, 8, 1000, 0.5);
-    QueenAlgorithm(75,10, INFINITY, 0.5, false);
-    // QueenAlgorithm(75,10, INFINITY, 0.5, false, 1, 0.7, 0.1);
+    QueenAlgorithm(75,10, INFINITY, 0.5, 5, 5, false);
+    // QueenAlgorithm(75,10, INFINITY, 0.5, false, 1, 0.7, 0.6);
 
-    /*
-    // Initialize the MPI environment
-    MPI_Init(&argc, &argv);
-
-    // Get the number of processes
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    // Get the rank of the process
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
-    // Print off a hello world message
-    printf("Hello world from processor %d out of %d processors\n",
-           world_rank, world_size);
-
-    // Finalize the MPI environment.
     MPI_Finalize();
-     */
+
 }
