@@ -82,19 +82,24 @@ Population init(int nbIndividus, int taille) {
  * @param pop la population sur laquelle on recherche le meilleur individu
  * @return le meilleur individu de la population passé en paramètre
  */
-std::vector<int> rechercheMeilleur(const Population &pop) {
-    int nbConflitsMeilleur = 6; // On initialise la variable du nombre conflit au nb de conflits maximum possible
+std::vector<int> rechercheMeilleur(Population &pop, bool modeSuppression = false) {
+    int nbConflitsMeilleur = INFINITY; // On initialise la variable du nombre conflit sur un très gros nombre
     std::vector<int> meilleurIndividu = pop[0];
     size_t indexDernierElement = meilleurIndividu.size() - 1;
+    int indexMeilleur;
 
-    for (std::vector<int> individu: pop) {
-        int nbConflitIndividuCourant = individu[indexDernierElement];
+    for (int i = 0; i < pop.size(); ++i) {
+        int nbConflitIndividuCourant = pop[i][indexDernierElement];
 
         if (nbConflitIndividuCourant < nbConflitsMeilleur) {
-            meilleurIndividu = individu;
+            meilleurIndividu = pop[i];
             nbConflitsMeilleur = nbConflitIndividuCourant;
+            indexMeilleur = i;
         }
     }
+    if (modeSuppression)
+        pop.erase(pop.begin() + indexMeilleur);
+
     return meilleurIndividu;
 }
 
@@ -104,14 +109,12 @@ std::vector<int> rechercheMeilleur(const Population &pop) {
  * @param nb nombre de meilleurs individus à extraire
  * @return le tableau des meilleurs individus
  */
-Population rechercheMeilleurs(const Population &pop, int nb) {
-    Population populationSub = pop;
+Population rechercheMeilleurs(Population &pop, int nb) {
     Population meilleurs;
 
     for (int i = 0; i < nb; ++i) {
-        std::vector<int> meilleur = rechercheMeilleur(populationSub); // Appel de rechercheMeilleur
+        std::vector<int> meilleur = rechercheMeilleur(pop, true); // Appel de rechercheMeilleur en mode suppression
         meilleurs.push_back(meilleur); // Ajout du meilleur trouvé au tableau à renvoyer
-        populationSub.erase(std::remove(populationSub.begin(), populationSub.end(), meilleur), populationSub.end());
         // Pb : Si plusieurs éléments sont identiques dans les meilleurs, il n'y en aura que 1 qui sera considéré et donc renvoyé par la fonction
         // ⇛ Pas plus mal pour la diversité cependant
     }
@@ -220,23 +223,57 @@ std::vector<int> mutationV2(std::vector<int> individu) {
 }
 
 /**
- * Fonction générale qui résout le problème des reines
- * @param nbIndividus nombre d'individus par générations
- * @param taille taille du tableau dans lequel résoudre le problème des reines (Ex : si taille = 4 -> tableau 4x4)
- * @param nbGenerations nombre de génération à itérer
- * @param p probabilité de croisement
+ * Fonction utilisant MPI, pour gérer l'envoi d'un vector c++
+ * @param vec le vector à envoyer
+ * @param dest le processus de destination
+ * @param tag l'étiquette
+ * @param comm communicateur
+ */
+void mpiEnvoyerVec(std::vector<int>& vec, int dest, int tag, MPI_Comm comm) {
+    int size = vec.size();
+    MPI_Send(&size, 1, MPI_INT, dest, tag, comm);
+    MPI_Send(vec.data(), size, MPI_INT, dest, tag, comm);
+}
+
+/**
+ * Fonction utilisant MPI, pour gérer la réception d'un vector c++
+ * @param vec le vector dans lequel les datas sont reçus
+ * @param source le processus source
+ * @param tag l'étiquette
+ * @param comm communicateur
+ */
+void mpiRecevoirVec(std::vector<int>& vec, int source, int tag, MPI_Comm comm) {
+    int size;
+    MPI_Status status;
+    MPI_Recv(&size, 1, MPI_INT, source, tag, comm, &status);
+    vec.resize(size);
+    MPI_Recv(vec.data(), size, MPI_INT, source, tag, comm, &status);
+}
+
+/**
+ * Fonction résolvant le problème des reines avec MPI et 3 processus
+ * @param nbIndividus taille des populations sur lesquelles il faudra itérer
+ * @param taille taille de la grille sur laquelle résoudre le problème
+ * @param nbGenerations nombre d'itérations maximum pour résoudre le problème
+ * @param p probabilité de croisement (UNIQUEMENT STRATEGIE 1)
+ * @param nbIterationAvantSwap nombre d'itérations avant chaque échange de meilleurs individus entre les processus
+ * @param nbIndividuASwap nombre de meilleurs individus que s'échangent les processus
+ * @param print activation de l'affichage ou non
+ * @param mode2 activation de la stratégie 2 ou non
+ * @param pCroisement probabilité de croisement (UNIQUEMENT STRATEGIE 2)
+ * @param pMutation probabilité de mutation (UNIQUEMENT STRATEGIE 2)
  */
 void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 100, float p = 0.5,
                     int nbIterationAvantSwap = 3, int nbIndividuASwap = 5, bool print = true,
-                    int mode = 0, float pCroisement = 0.5, float pMutation = 0.5) {
+                    int mode2 = false, float pCroisement = 0.5, float pMutation = 0.5) {
 
-    int nbProcessus, rang;
-    MPI_Comm_size(MPI_COMM_WORLD, &nbProcessus);
+
+    int rang, tag = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rang);
+    MPI_Status status;
 
     srand(time(nullptr) + rang); // Pour assurer une meilleure génération des randoms
 
-    // printf("Processus %d sur %d processus\n", rang, nbProcessus);
 
     int compteurGeneration = 0;
     Population generation = init(nbIndividus, taille);
@@ -251,11 +288,49 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
     while (compteurGeneration <= nbGenerations && !solution) { // Itération sur les générations
         // Toutes les 'nbIterationAvantSwap' iterations, trouver les 'nbIndividuASwap' meilleurs individus de la population
         // et les envoyer au processus 'rang + 1' sauf si c'est le processus 2 il envoie au processus 0
-        if (compteurGeneration % nbIterationAvantSwap == 0) {
-            Population tabToSend = rechercheMeilleurs(generation, nbIndividuASwap);
 
-            if (rang == 2)
-                return; // TODO A faire
+        if (compteurGeneration % nbIterationAvantSwap == 0) {
+            Population tabAEnvoyer = rechercheMeilleurs(generation, nbIndividuASwap); // La fonction s'occupe de la suppression des individus
+            Population tabRecu(nbIndividuASwap); // Initialisation du vector de reception en indiquant la taille (IMPORTANT)
+
+            // Envois et réceptions pour chaque processus
+            // Envois de 'tabAEnvoyer' (meilleurs individus)
+            // Reception dans 'tabRecu'
+            if (rang == 2) {
+                // Envoi 1 vector par 1 vector
+                for (std::vector<int> individusAEnvoyer : tabAEnvoyer) {
+                    mpiEnvoyerVec(individusAEnvoyer, 0, tag, MPI_COMM_WORLD);
+                }
+
+                // Reçois 1 vector par 1 vector
+                for (int i = 0; i < tabAEnvoyer.size(); ++i) {
+                    mpiRecevoirVec(tabRecu[i], 1, tag, MPI_COMM_WORLD);
+                }
+            }
+            if (rang == 1) {
+                for (std::vector<int> individusAEnvoyer : tabAEnvoyer) {
+                    mpiEnvoyerVec(individusAEnvoyer, 2, tag, MPI_COMM_WORLD);
+                }
+
+                for (int i = 0; i < tabAEnvoyer.size(); ++i) {
+                    mpiRecevoirVec(tabRecu[i], 0, tag, MPI_COMM_WORLD);
+                }
+            }
+            if (rang == 0) {
+                for (std::vector<int> individusAEnvoyer : tabAEnvoyer) {
+                    mpiEnvoyerVec(individusAEnvoyer, 1, tag, MPI_COMM_WORLD);
+                }
+
+                for (int i = 0; i < tabAEnvoyer.size(); ++i) {
+                    mpiRecevoirVec(tabRecu[i], 2, tag, MPI_COMM_WORLD);
+                }
+            }
+
+            // Injection du tableau reçu dans la génération courante du process
+            for (const std::vector<int>& individu : tabRecu) {
+                generation.push_back(individu);
+            }
+
         }
 
         // Print pour chaque génération
@@ -267,7 +342,7 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
 
         for (int i = 0; i < nbIndividus; ++i) { // Pour chaque individu de la génération
 
-            if (mode == 0) { // Stratégie 1
+            if (!mode2) { // Stratégie 1
                 float r = static_cast <float> (rand()) /
                           static_cast <float> (RAND_MAX); // Génération d'un float entre 0 et 1.
 
@@ -318,10 +393,12 @@ void QueenAlgorithm(int nbIndividus = 15, int taille = 4, int nbGenerations = 10
         }
     }
     std::cout << "Meilleur individu trouvé (en " << compteurGeneration-1 << " itérations) : ";
-    int nbConflitsElementFinal = meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1];
+    // int nbConflitsElementFinal = meilleurIndividuGlobal[meilleurIndividuGlobal.size()-1];
     meilleurIndividuGlobal.pop_back(); // Suppression du nombre de conflits pour affichage
     afficheIndividu(meilleurIndividuGlobal);
-    std::cout << "(P" << rang << ") Nombre de conflit(s) : " << nbConflitsElementFinal << " conflit(s).";
+    // std::cout << nbConflitsElementFinal;
+    MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS); // Quand un processus a trouvé la solution, on coupe les processus après avoir affiché les résultats
+    MPI_Finalize();
 }
 
 int main(int argc, char **argv) {
@@ -329,13 +406,14 @@ int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
 
     // ========================================== TESTS ======================================
-    // QueenAlgorithm();
-    // QueenAlgorithm(50, 6, 250, 0.5, false, 0, 0.5, 0.5);
-    // QueenAlgorithm(10, 5, 1000);
-    // QueenAlgorithm(100, 8, 1000, 0.5);
-    QueenAlgorithm(75,10, INFINITY, 0.5, 5, 5, false);
-    // QueenAlgorithm(75,10, INFINITY, 0.5, false, 1, 0.7, 0.6);
+    //QueenAlgorithm(); // Problème de base : 4x4, 100 itérations max, population : 15
 
-    MPI_Finalize();
+    // ===== Test 10x10, boucle infinie, population : 10 =====
+    // STRATEGIE 1
+    // QueenAlgorithm(10,10, INFINITY, 0.5, 5, 5, false);
+    // STRATEGIE 2
+    // QueenAlgorithm(10,10, INFINITY, 0.5, 5, 10, false, true, 0.7, 0.2);
+
+    // =======================================================================================
 
 }
